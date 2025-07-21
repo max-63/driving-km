@@ -82,7 +82,7 @@ DATABASES = {
 
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://b2f98a71f8c3.ngrok-free.app',
+    'https://*.ngrok-free.app'
 ]
 
 # Password validation
