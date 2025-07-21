@@ -1,0 +1,144 @@
+/* Reset basique */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #e7f0ff 0%, #c3d9ff 100%);
+  color: #003366;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Conteneur principal */
+.container {
+  max-width: 960px;
+  margin: 2rem auto 4rem;
+  padding: 0 1rem;
+}
+
+/* Header jaune */
+.header-yellow {
+  background-color: #f4d35e;
+  padding: 1.5rem 1rem;
+  border-radius: 0.4rem;
+  margin-bottom: 2.5rem;
+  text-align: center;
+  color: #003366;
+  font-weight: 700;
+  box-shadow: 0 4px 6px rgb(244 211 94 / 0.4);
+  user-select: none;
+}
+
+/* Boutons */
+.btn-yellow {
+  background-color: #f4d35e;
+  color: #003366;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.35rem;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  box-shadow: 0 3px 5px rgb(244 211 94 / 0.5);
+}
+
+.btn-yellow:hover:not(:disabled) {
+  background-color: #e6c94f;
+  color: #002244;
+  box-shadow: 0 5px 10px rgb(230 201 79 / 0.7);
+}
+
+.btn-yellow:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+  border-radius: 0.35rem;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 3px 5px rgb(108 117 125 / 0.4);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+/* Distance affichée */
+#distance, #total_distance, #total_duration {
+  font-size: 1.4rem;
+  margin-top: 1rem;
+  font-weight: 600;
+  user-select: none;
+  text-align: center;
+}
+
+/* Sessions précédentes */
+.sessions-list {
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 4px 8px rgb(0 51 102 / 0.1);
+  max-height: 320px;
+  overflow-y: auto;
+  font-size: 1rem;
+  color: #003366;
+  list-style-type: none;
+}
+
+.sessions-list li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #f4d35e;
+  user-select: text;
+}
+
+.sessions-list li:last-child {
+  border-bottom: none;
+}
+
+/* Titre des sections */
+h1, h2 {
+  font-weight: 700;
+  user-select: none;
+  color: #003366;
+}
+
+h2 {
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.chart-container {
+  max-width: 100%;
+  background: #ffffffdd;
+  padding: 1.2rem 2.5rem; /* plus de padding horizontal */
+  border-radius: 0.6rem;
+  box-shadow: 0 6px 12px rgb(0 51 102 / 0.15);
+  margin: 0 auto 4rem;
+  box-sizing: border-box; /* pour que le padding ne dépasse pas */
+  /* Optionnel, limite la largeur max pour mieux centrer */
+  max-width: 960px;
+}
+
+
+/* Formulaire caché */
+#distanceForm {
+  display: none;
+}
+
+/* Responsive petites améliorations */
+@media (max-width: 576px) {
+  #distance, #total_distance, #total_duration {
+    font-size: 1.2rem;
+  }
+  .btn-yellow, .btn-secondary {
+    font-size: 1rem;
+  }
+  .sessions-list {
+    font-size: 0.9rem;
+    max-height: 250px;
+  }
+}
