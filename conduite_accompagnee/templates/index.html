@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Conduite Accompagnée - Comptage KM 🚗</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+    <style>
+      body {
+        background-color: #e7f0ff; /* bleu clair */
+        color: #003366; /* bleu foncé */
+      }
+      .btn-yellow {
+        background-color: #f4d35e;
+        color: #003366;
+        font-weight: 600;
+      }
+      .btn-yellow:hover {
+        background-color: #e6c94f;
+        color: #002244;
+      }
+      #distance {
+        font-size: 1.5rem;
+        margin-top: 20px;
+        font-weight: 600;
+      }
+      .header-yellow {
+        background-color: #f4d35e;
+        padding: 1rem;
+        border-radius: 0.3rem;
+        margin-bottom: 2rem;
+        text-align: center;
+        color: #003366;
+        font-weight: 700;
+      }
+      ul.sessions-list li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f4d35e;
+      }
+    </style>
+
+    {% load format_filters %}
+    {% load duration_filters %}
+
+  </head>
+  <body>
+    <div class="container mt-5">
+      <div class="header-yellow">
+        <h1>Compteur de km en conduite accompagnée</h1>
+      </div>
+
+      <div class="d-flex gap-3 mb-3">
+        <button id="startBtn" class="btn btn-yellow flex-fill">▶️ Start</button>
+        <button id="stopBtn" class="btn btn-secondary flex-fill" disabled>
+          ⏹️ Stop
+        </button>
+      </div>
+
+      <div id="distance">Distance parcourue : 0 km</div>
+      <div id="total_distance">
+        Distance parcourue cummulée: {{ total_distance }}
+      </div>
+
+      <div id="total_duration">
+        Temps de route cumulé : {{ total_duration|duration_hms }}
+      </div>
+
+      <form
+        id="distanceForm"
+        method="POST"
+        action="{% url 'dashboard' %}"
+        style="display: none"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="distance" id="distanceInput" value="0" />
+        <input type="hidden" name="duration" id="durationInput" value="0" />
+      </form>
+
+      <h2 class="mt-5 mb-3">Sessions précédentes :</h2>
+      <ul class="sessions-list list-unstyled">
+  {% for session in sessions %}
+    <li>
+      {{ session.date|date:"d/m/Y H:i" }} — {{ session.distance_km|floatformat:2 }} km — durée : {{ session.duree|duration_hms }}
+    </li>
+  {% empty %}
+    <li>Aucune session enregistrée</li>
+  {% endfor %}
+</ul>
+
+    </div>
+    <h2 class="mt-5">Évolution quotidienne des kilomètres 🧭</h2>
+    <canvas id="lineChart" width="400" height="200"></canvas>
+
+    <script>
+        const ctx = document.getElementById('lineChart').getContext('2d');
+        const lineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Kilomètres parcourus par jour',
+                data: {{ chart_data|safe }},
+                fill: false,
+                borderColor: '#f4d35e',
+                backgroundColor: '#f4d35e',
+                tension: 0.3,
+                pointBackgroundColor: '#003366',
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+            },
+            options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                labels: {
+                    color: '#003366',
+                    font: { weight: 'bold' }
+                }
+                },
+                tooltip: {
+                callbacks: {
+                    label: context => `${context.parsed.y} km`
+                }
+                }
+            },
+            scales: {
+                y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Km',
+                    color: '#003366',
+                    font: { weight: 'bold' }
+                },
+                ticks: { color: '#003366' }
+                },
+                x: {
+                title: {
+                    display: true,
+                    text: 'Jour du mois',
+                    color: '#003366',
+                    font: { weight: 'bold' }
+                },
+                ticks: { color: '#003366' }
+                }
+            }
+            }
+        });
+    </script>
+
+
+    <script>
+      let watchId = null;
+      let positions = [];
+      let totalDistance = 0;
+      let startTime = null;
+      const MIN_DISTANCE_THRESHOLD = 0.01; // 0.01 km = 10 mètres
+
+
+      function haversine(lat1, lon1, lat2, lon2) {
+        function toRad(x) {
+          return (x * Math.PI) / 180;
+        }
+        let R = 6371;
+        let dLat = toRad(lat2 - lat1);
+        let dLon = toRad(lon2 - lon1);
+        let a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const distanceDiv = document.getElementById("distance");
+      const distanceInput = document.getElementById("distanceInput");
+      const durationInput = document.getElementById("durationInput");
+      const distanceForm = document.getElementById("distanceForm");
+
+      startBtn.onclick = () => {
+        if (!navigator.geolocation) {
+          alert("Géolocalisation non supportée");
+          return;
+        }
+
+        positions = [];
+        totalDistance = 0;
+        distanceDiv.textContent = "Distance parcourue : 0 km";
+        startTime = new Date(); // On enregistre l'heure de départ
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+
+            if (positions.length > 0) {
+              const last = positions[positions.length - 1];
+              const dist = haversine(
+                last.latitude,
+                last.longitude,
+                latitude,
+                longitude
+              );
+
+              if (dist >= MIN_DISTANCE_THRESHOLD) {
+                totalDistance += dist;
+                distanceDiv.textContent = `Distance parcourue : ${totalDistance.toFixed(
+                    3
+                )} km`;
+                positions.push({ latitude, longitude });
+              }
+              
+            } else {
+                positions.push({ latitude, longitude });
+            }
+            
+          },
+          (err) => {
+            alert("Erreur géolocalisation: " + err.message);
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 1000,
+            timeout: 10000,
+          }
+        );
+      };
+
+      stopBtn.onclick = () => {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+        }
+
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+
+        const endTime = new Date();
+        const durationSec = Math.floor((endTime - startTime) / 1000); // durée en secondes
+
+        distanceInput.value = totalDistance.toFixed(3);
+        durationInput.value = durationSec;
+
+        distanceForm.submit();
+      };
+    </script>
+  </body>
+</html>
