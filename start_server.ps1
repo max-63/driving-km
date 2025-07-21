@@ -1,5 +1,5 @@
 # Active l'environnement virtuel
-. .\.venv\Scripts\Activate.ps1
+..\.venv\Scripts\Activate.ps1
 
 # Ajout du token ngrok (inutile si déjà configuré une fois)
 ngrok config add-authtoken 2zN52wTS0BPYkfPOOdJhkJ0RHF3_4jVLHrPjeb1Kjo95pCQug
