@@ -11,3 +11,6 @@ python manage.py runserver 8000 &
 
 # Lancer ngrok sur le port 8000 (affiche l'URL publique)
 ngrok http 8000
+
+NGROK_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | grep -o 'https://[^"]*')
+echo "🔗 URL publique : $NGROK_URL"
