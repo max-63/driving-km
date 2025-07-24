@@ -15,4 +15,4 @@ def duration_hms(value):
     elif minutes > 0:
         return f"{minutes}m {seconds}s"
     else:
-        return f"{seconds}s"
+        return f"{seconds}s"  

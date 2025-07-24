@@ -1,0 +1,53 @@
+#progress-container {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+  height: 100vh; /* Prend toute la hauteur de la fenêtre */
+}
+
+#badges {
+  display: flex;
+  flex-direction: column; /* vertical */
+  align-items: center;
+  gap: 0;
+  height: 100%; /* prends toute la hauteur disponible dans #progress-container */
+  width: 100px; /* largeur fixe pour contenir les badges */
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column; /* badges empilés verticalement */
+  align-items: center;
+  width: 100%; /* prend toute la largeur de #badges */
+  flex-grow: 1; /* prend toute la hauteur possible pour répartir l’espace */
+}
+
+.badge {
+  max-width: 300px;
+  text-align: center;
+  margin-bottom: 4px; /* petit espace sous chaque badge */
+  flex-shrink: 0; /* empêcher rétrécissement */
+}
+
+.badge img {
+  width: 100%;
+  height: auto;
+  max-width: 60px;
+}
+
+.segment {
+  width: 6px;
+  background: lightgray;
+  border-radius: 3px;
+  margin: 0;
+  flex-grow: 1; /* le segment prend toute la hauteur possible entre les badges */
+  position: relative;
+  overflow: hidden;
+}
+  
+.fill {
+  background-color: #93d66e;
+  height: 100%;
+  width: 100%;
+  transition: height 0.4s ease-in-out;
+}

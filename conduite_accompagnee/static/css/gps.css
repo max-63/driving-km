@@ -1,0 +1,38 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f9fafb;
+}
+
+.container {
+  padding: 1rem;
+  max-width: 700px;
+  margin: auto;
+}
+
+h1 {
+  text-align: center;
+  color: #003366;
+}
+
+.input-group {
+  display: flex;
+  margin-bottom: 1rem;
+  gap: 0.5rem;
+}
+
+#destination {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 1rem;
+}
+
+#goButton {
+  padding: 0.5rem 1rem;
+  background-color: #f4d35e;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+

@@ -11,7 +11,8 @@ from django.db.models.functions import TruncDate
 from django.utils.timezone import localtime
 from collections import defaultdict 
 import locale
-
+import requests
+from django.utils.timezone import localtime, now
 
 def dashboard(request):
     if request.method == "POST":
@@ -24,12 +25,21 @@ def dashboard(request):
         )
         return redirect('dashboard')
 
-    sessions = SessionConduite.objects.filter(user=request.user).order_by('-date')
+    # Date actuelle (aware datetime)
+    today = localtime(now())
+    date_31_days_ago = today - timedelta(days=31)
+
+    # Filtrer les sessions dans les 31 derniers jours
+    sessions = SessionConduite.objects.filter(
+        user=request.user,
+        date__gte=date_31_days_ago,  # date >= il y a 31 jours
+        date__lte=today              # date <= maintenant
+    ).order_by('date')
 
     total_seconds = sum(session.duree.total_seconds() for session in sessions)
     total_duration = timedelta(seconds=total_seconds)
 
-    # --- Regrouper les distances et durées par jour
+    # Regrouper distances et durées par jour
     daily_distances = defaultdict(float)
     daily_durations = defaultdict(float)
 
@@ -38,25 +48,18 @@ def dashboard(request):
         daily_distances[date] += session.distance_km
         daily_durations[date] += session.duree.total_seconds()
 
-    # --- Tri par date croissante
     sorted_data = sorted(daily_distances.items())
 
-    # --- Forcer le français (UTF-8 sous Linux/macOS)
     try:
         locale.setlocale(locale.LC_TIME, "fr_FR.UTF-8")
     except:
         locale.setlocale(locale.LC_TIME, "fr_FR")
 
-    # --- Labels : lundi 22, mardi 23, ...
     chart_labels = [date.strftime("%A %d").capitalize() for date, _ in sorted_data]
-
-    # --- Données : distance en km
     chart_data = [round(distance, 2) for _, distance in sorted_data]
 
-    # --- Vitesse moyenne par jour (km/h)
     vmoyenne_par_jour = [
-        round((daily_distances[date] / (daily_durations[date] / 3600)), 1)
-        if daily_durations[date] > 0 else 0
+        round((daily_distances[date] / (daily_durations[date] / 3600)), 1) if daily_durations[date] > 0 else 0
         for date, _ in sorted_data
     ]
 
@@ -66,7 +69,7 @@ def dashboard(request):
         'total_duration': total_duration,
         'chart_labels': chart_labels,
         'chart_data': chart_data,
-        'vitesse_moyenne': vmoyenne_par_jour,  # à utiliser si tu veux un autre graphique
+        'vitesse_moyenne': vmoyenne_par_jour,
     }
 
     return render(request, "index.html", context)
@@ -106,3 +109,65 @@ def get_all_data_user(request):
         total_duration = sum(session.duree.total_seconds() for session in sessions)
         return JsonResponse({"total_distance": total_distance, "total_duration": total_duration, "user": user.username})
     return JsonResponse({"error": "Invalid request method"})
+
+
+
+def badges(request):
+    if request.method == "POST":
+        distance = float(request.POST.get("distance", 0))
+        duration_seconds = int(request.POST.get("duration", 0))
+        SessionConduite.objects.create(
+            distance_km=distance,
+            duree=timedelta(seconds=duration_seconds),
+            user=request.user
+        )
+        return redirect('dashboard')
+
+    # Date actuelle (aware datetime)
+    today = localtime(now())
+    date_31_days_ago = today - timedelta(days=31)
+
+    # Filtrer les sessions dans les 31 derniers jours
+    sessions = SessionConduite.objects.filter(
+        user=request.user,
+        date__gte=date_31_days_ago,  # date >= il y a 31 jours
+        date__lte=today              # date <= maintenant
+    ).order_by('date')
+
+    total_seconds = sum(session.duree.total_seconds() for session in sessions)
+    total_duration = timedelta(seconds=total_seconds)
+
+    # Regrouper distances et durées par jour
+    daily_distances = defaultdict(float)
+    daily_durations = defaultdict(float)
+
+    for session in sessions:
+        date = localtime(session.date).date()
+        daily_distances[date] += session.distance_km
+        daily_durations[date] += session.duree.total_seconds()
+
+    sorted_data = sorted(daily_distances.items())
+
+    try:
+        locale.setlocale(locale.LC_TIME, "fr_FR.UTF-8")
+    except:
+        locale.setlocale(locale.LC_TIME, "fr_FR")
+
+    chart_labels = [date.strftime("%A %d").capitalize() for date, _ in sorted_data]
+    chart_data = [round(distance, 2) for _, distance in sorted_data]
+
+    vmoyenne_par_jour = [
+        round((daily_distances[date] / (daily_durations[date] / 3600)), 1) if daily_durations[date] > 0 else 0
+        for date, _ in sorted_data
+    ]
+
+    context = {
+        'sessions': sessions,
+        'total_distance': sum(session.distance_km for session in sessions),
+        'total_duration': total_duration,
+        'chart_labels': chart_labels,
+        'chart_data': chart_data,
+        'vitesse_moyenne': vmoyenne_par_jour,
+    }
+
+    return render(request, "badges-test.html", context)
