@@ -30,7 +30,7 @@
   height: 40px;          /* hauteur du segment entre badges */
   background: lightgray;
   border-radius: 3px;
-  margin: 5px 0;         /* un peu d’espace au-dessus et dessous */
+  margin: 0px 0;         /* un peu d’espace au-dessus et dessous */
   position: relative;
   overflow: hidden;
 }
