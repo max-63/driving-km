@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    
     positions = [];
     totalDistance = 0;
     lastTimestamp = null;
