@@ -135,82 +135,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-  document.getElementById('current_badge').addEventListener('click', function() {
-    Swal.fire({
-      title: 'Badges',
-      html: `
-      
-        <div id="progress-container">
-        <div id="badges">
-
-          
-
-          <!-- Badge 100 -->
-          <div class="wrapper wrapper-100">
-            <div class="badge" data-km="100">
-              <img src="${static_url}imgs/badges/100.png" alt="Badge 100 km" />
-            </div>
-            <div class="segment"></div>
-          </div>
-
-          <!-- Badge 250 -->
-          <div class="wrapper">
-            <div class="badge" data-km="250">
-              <img src="${static_url}imgs/badges/250.png" alt="Badge 250 km" />
-            </div>
-            <div class="segment"></div>
-          </div>
-
-          <!-- Badge 500 -->
-          <div class="wrapper">
-            <div class="badge" data-km="500">
-              <img src="${static_url}imgs/badges/500.png" alt="Badge 500 km" />
-            </div>
-            <div class="segment"></div>
-          </div>
-
-          <!-- Badge 1000 -->
-          <div class="wrapper">
-            <div class="badge" data-km="1000">
-              <img src="${static_url}imgs/badges/1000.png" alt="Badge 1000 km" />
-            </div>
-            <div class="segment"></div>
-          </div>
-
-          <!-- Badge 1500 -->
-          <div class="wrapper">
-            <div class="badge" data-km="1500">
-              <img src="${static_url}imgs/badges/1500.png" alt="Badge 1500 km" />
-            </div>
-            <div class="segment"></div>
-          </div> 
-
-          <!-- Badge 2000 -->
-          <div class="wrapper">
-            <div class="badge" data-km="2000">
-              <img src="${static_url}imgs/badges/2000.png" alt="Badge 2000 km" />
-            </div>
-            <div class="segment"></div>
-          </div>
-
-          <!-- Badge 3000 (dernier, pas de segment) -->
-          <div class="wrapper">
-            <div class="badge" data-km="3000">
-              <img src="${static_url}imgs/badges/3000.png" alt="Badge 3000 km" />
-            </div>
-          </div>
+document.getElementById('current_badge').addEventListener('click', function() {
+  Swal.fire({
+    title: 'Mes badges',
+    html: `
+      <div class="badge-list" id="badge-list" style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+        <div style="display: flex; gap: 10px;">
+          <img src="${static_url}imgs/badges/${totalKm >= 100 ? '100.png' : '100_locked.png'}" alt="Badge 100 km" width="60" />
+          <img src="${static_url}imgs/badges/${totalKm >= 250 ? '250.png' : '250_locked.png'}" alt="Badge 250 km" width="60" />
+          <img src="${static_url}imgs/badges/${totalKm >= 500 ? '500.png' : '500_locked.png'}" alt="Badge 500 km" width="60" />
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <img src="${static_url}imgs/badges/${totalKm >= 1000 ? '1000.png' : '1000_locked.png'}" alt="Badge 1000 km" width="60" />
+          <img src="${static_url}imgs/badges/${totalKm >= 1500 ? '1500.png' : '1500_locked.png'}" alt="Badge 2000 km" width="60" />
+          <img src="${static_url}imgs/badges/${totalKm >= 2000 ? '2000.png' : '2000_locked.png'}" alt="Badge 2000 km" width="60" />
+          <img src="${static_url}imgs/badges/${totalKm >= 3000 ? '3000.png' : '3000_locked.png'}" alt="Badge 3000 km" width="60" />
         </div>
       </div>
-      
-      `,
-      showCloseButton: true,
-      showConfirmButton: false,
-      showCancelButton: false,
-      didOpen: () => {
-        const popupContainer = document.querySelector("#progress-container");
-        updateProgress(parseInt(totalKm), popupContainer);
+    `,
+    showCloseButton: true,
+    showConfirmButton: false,
+    showCancelButton: false
+  });
+});
 
-      },
-    })
-  })
+
+
 });

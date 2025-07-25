@@ -18,12 +18,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
+  
   {% load static format_filters duration_filters %}
   <link rel="stylesheet" href="{% static "css/dashboard.css" %}">
   <link rel="stylesheet" href="{% static "css/gps.css" %}">
   {% load static %}
-  <link rel="stylesheet" href="{% static "css/badges-test.css" %}" />
+  {% comment %} <link rel="stylesheet" href="{% static "css/badges-test.css" %}" /> {% endcomment %}
 </head>
 <body>
   <div id="tt-km" style="display: none;" data="{{ total_distance|default:0 }}"></div>
@@ -50,7 +50,7 @@
     </div>
 
     <!-- Compteurs -->
-    <div class="row compteur-container text-center mb-4">
+    <div class="row justify-content-center">
       <div class="col-12 col-md-6 mb-3">
         <div class="compteur">
           <div class="compteur-label">Distance parcourue</div>
@@ -59,17 +59,34 @@
       </div>
       <div class="col-12 col-md-6 mb-3">
         <div class="compteur">
-          <div class="compteur-label">Vitesse</div>
+          <div class="compteur-label">Vitesse instantannée </div>
           <div id="speedValue" class="compteur-value">0.0 <span class="unit">km/h</span></div>
         </div>
       </div>
     </div>
 
-    <!-- Statistiques cumulées -->
-    <div class="text-center mb-4">
-      <p id="total_distance">Distance parcourue cumulée : {{ total_distance }}</p>
-      <p id="total_duration">Temps de route cumulé : {{ total_duration|duration_hms }}</p>
+    <!-- Statistiques cumulées stylées -->
+    <div class="row justify-content-center mb-5">
+      <div class="col-12 col-md-5 mb-3">
+        <div class="stat-card shadow-sm p-3 d-flex align-items-center gap-3">
+          <span class="stat-icon">🛣️</span>
+          <div>
+            <div class="stat-label">Distance parcourue cumulée</div>
+            <div class="stat-value">{{ total_distance }} km</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-5 mb-3">
+        <div class="stat-card shadow-sm p-3 d-flex align-items-center gap-3">
+          <span class="stat-icon">⏱️</span>
+          <div>
+            <div class="stat-label">Temps de route cumulé</div>
+            <div class="stat-value">{{ total_duration|duration_hms }}</div>
+          </div>
+        </div>
+      </div>
     </div>
+
 
     <!-- Formulaire caché -->
     <form id="distanceForm" method="POST" action="{% url 'dashboard' %}">
@@ -77,7 +94,9 @@
       <input type="hidden" name="distance" id="distanceInput" value="0" />
       <input type="hidden" name="duration" id="durationInput" value="0" />
     </form>
-    <button id="exportPdfBtn" class="btn btn-outline-success mb-3">Exporter journal PDF</button>
+    {% comment %} <button id="exportPdfBtn" class="btn btn-outline-success mb-3">Exporter journal PDF</button> {% endcomment %}
+
+
 
 
     <script>
@@ -128,19 +147,47 @@
 
     </script>
 
-    <!-- Sessions précédentes -->
     <section class="mb-5">
-      <h2>Sessions précédentes</h2>
-      <ul class="sessions-list list-group">
-        {% for session in sessions %}
-          <li class="list-group-item">
-            {{ session.date|date:"d/m/Y H:i" }} — {{ session.distance_km|floatformat:2 }} km — durée : {{ session.duree|duration_hms }}
-          </li>
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="m-0">📋 Sessions récentes</h2>
+        <button class="Btn" id="exportPdfBtn">
+          <svg class="svgIcon" viewBox="0 0 384 512" height="1em" xmlns="http://www.w3.org/2000/svg">
+            <path d="M169.4 470.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 
+            0-45.3s-32.8-12.5-45.3 0L224 370.8 224 64c0-17.7-14.3-32-32-32s-32 
+            14.3-32 32l0 306.7L54.6 265.4c-12.5-12.5-32.8-12.5-45.3 
+            0s-12.5 32.8 0 45.3l160 160z"></path>
+          </svg>
+          <span class="icon2"></span>
+          <span class="tooltip">Download</span>
+        </button>
+      </div>
+
+      <div class="row g-3">
+        {% for session in sessions_7_days %}
+          <div class="col-12">
+            <div class="card session-card shadow-sm border-0">
+              <div class="card-body py-2">
+                <div class="text-dark">
+                  <div class="fw-bold small text-uppercase text-muted">{{ session.date|date:"d/m/Y H:i" }}</div>
+                  🚗 {{ session.distance_km|floatformat:2 }} km — 🕒 {{ session.duree|duration_hms }}
+                  <div class="text-muted small fst-italic">☁️ {{ session.meteo }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
         {% empty %}
-          <li class="list-group-item">Aucune session enregistrée</li>
+          <div class="col-12 text-center text-muted">Aucune session dans les 7 derniers jours</div>
         {% endfor %}
-      </ul>
+      </div>
+
+      {% if has_more_sessions %}
+        <div class="text-center mt-3">
+          <a href="{% url 'sessions_toutes' %}" class="btn btn-sm btn-outline-secondary">plus...</a>
+        </div>
+      {% endif %}
     </section>
+
+
 
     <!-- Graphique -->
     <section class="chart-container">
@@ -210,7 +257,8 @@
       }
     });
   </script>
-
+  {% load static %}
+  <script src="{% static "js/meteo.js" %}" type="module"></script>
 
 </body>
 </html>

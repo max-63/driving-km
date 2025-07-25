@@ -14,6 +14,7 @@ import locale
 import requests
 from django.utils.timezone import localtime, now
 
+
 def dashboard(request):
     if request.method == "POST":
         distance = float(request.POST.get("distance", 0))
@@ -25,25 +26,31 @@ def dashboard(request):
         )
         return redirect('dashboard')
 
-    # Date actuelle (aware datetime)
     today = localtime(now())
     date_31_days_ago = today - timedelta(days=31)
+    date_7_days_ago = today - timedelta(days=7)
 
-    # Filtrer les sessions dans les 31 derniers jours
-    sessions = SessionConduite.objects.filter(
+    # Toutes les sessions des 31 derniers jours
+    all_sessions = SessionConduite.objects.filter(
         user=request.user,
-        date__gte=date_31_days_ago,  # date >= il y a 31 jours
-        date__lte=today              # date <= maintenant
-    ).order_by('date')
+        date__gte=date_31_days_ago,
+        date__lte=today
+    ).order_by('-date')
 
-    total_seconds = sum(session.duree.total_seconds() for session in sessions)
+    # Sessions récentes (7 derniers jours)
+    recent_sessions = all_sessions.filter(date__gte=date_7_days_ago)
+
+    # Savoir s’il y a des sessions plus anciennes à afficher avec un "plus..."
+    has_more_sessions = all_sessions.count() > recent_sessions.count()
+
+    # Statistiques générales (sur 31 jours)
+    total_seconds = sum(session.duree.total_seconds() for session in all_sessions)
     total_duration = timedelta(seconds=total_seconds)
 
-    # Regrouper distances et durées par jour
     daily_distances = defaultdict(float)
     daily_durations = defaultdict(float)
 
-    for session in sessions:
+    for session in all_sessions:
         date = localtime(session.date).date()
         daily_distances[date] += session.distance_km
         daily_durations[date] += session.duree.total_seconds()
@@ -64,8 +71,9 @@ def dashboard(request):
     ]
 
     context = {
-        'sessions': sessions,
-        'total_distance': sum(session.distance_km for session in sessions),
+        'sessions_7_days': recent_sessions,
+        'has_more_sessions': has_more_sessions,
+        'total_distance': sum(session.distance_km for session in all_sessions),
         'total_duration': total_duration,
         'chart_labels': chart_labels,
         'chart_data': chart_data,
@@ -171,3 +179,60 @@ def badges(request):
     }
 
     return render(request, "badges-test.html", context)
+
+
+
+def sessions_toutes(request):
+    sessions = SessionConduite.objects.filter(user=request.user).order_by('-date')
+    return render(request, "sessions_toutes.html", {'sessions': sessions})
+
+
+
+
+
+
+@csrf_exempt
+def meteo(request):
+    lat = request.GET.get("lat")
+    lon = request.GET.get("lon")
+    print(f"📍 Coordonnées fournies : {lat}, {lon}")
+
+    if not lat or not lon:
+        return JsonResponse({"error": "Latitude et longitude requises."}, status=400)
+
+    try:
+        # Reverse Geocoding avec Nominatim pour obtenir le nom de la ville
+        nominatim_url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=10&addressdetails=1"
+        headers = {'User-Agent': 'DjangoMeteoApp/1.0'}
+        response = requests.get(nominatim_url, headers=headers)
+        data = response.json()
+        ville = data.get("address", {}).get("city") or data.get("address", {}).get("town") or data.get("address", {}).get("village") or "Inconnue"
+
+        print(f"📍 Localisation : {ville}")
+
+        # Appel Open-Meteo (sans clé API)
+        open_meteo_url = (
+            f"https://api.open-meteo.com/v1/forecast?"
+            f"latitude={lat}&longitude={lon}&current_weather=true&temperature_unit=celsius&language=fr"
+        )
+        weather_response = requests.get(open_meteo_url)
+        weather_data = weather_response.json()
+
+        current = weather_data.get("current_weather", {})
+
+        if not current:
+            return JsonResponse({"error": "Pas de données météo disponibles."}, status=500)
+
+        meteo = {
+            "description": f"Vitesse du vent : {current.get('windspeed', 'N/A')} km/h, Direction du vent : {current.get('winddirection', 'N/A')}°",
+            "temperature": current.get("temperature"),
+            "ville": ville,
+        }
+
+        print(f"🌡️ Météo actuelle à {ville} : {meteo['description']} ({meteo['temperature']}°C)")
+
+        return JsonResponse(meteo)
+
+    except Exception as e:
+        print("❌ Erreur :", e)
+        return JsonResponse({"error": "Erreur serveur."}, status=500)

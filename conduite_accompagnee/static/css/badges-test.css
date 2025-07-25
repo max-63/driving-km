@@ -41,3 +41,16 @@
   height: 100%;
   transition: height 0.4s ease-in-out;
 }
+
+
+
+
+
+
+
+
+
+.badge-list img {
+  width: 75px;
+  height: auto;
+}
