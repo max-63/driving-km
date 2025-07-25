@@ -93,59 +93,13 @@
       {% csrf_token %}
       <input type="hidden" name="distance" id="distanceInput" value="0" />
       <input type="hidden" name="duration" id="durationInput" value="0" />
+      <input type="hidden" name="meteo" id="meteoInput" value="0"/>
     </form>
     {% comment %} <button id="exportPdfBtn" class="btn btn-outline-success mb-3">Exporter journal PDF</button> {% endcomment %}
 
 
+    <div id="url_meteo" data="{% url "meteo" %}"></div>
 
-
-    <script>
-      document.getElementById('exportPdfBtn').addEventListener('click', () => {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      // Titre
-      doc.setFontSize(18);
-      doc.text("Journal de conduite", 14, 22);
-
-      // Colonnes du tableau
-      const columns = [
-        { header: 'Date', dataKey: 'date' },
-        { header: 'Distance (km)', dataKey: 'distance' },
-        { header: 'Durée', dataKey: 'duration' },
-        { header: 'Météo', dataKey: 'meteo'}
-      ];
-
-      // Données extraites depuis Django
-      const rows = [
-        {% for session in sessions %}
-        {
-          date: "{{ session.date|date:'d/m/Y H:i' }}",
-          distance: "{{ session.distance_km|floatformat:2 }}",
-          duration: "{{ session.duree|duration_hms }}",
-          meteo : "{{ session.meteo }}"
-        },
-        {% endfor %}
-      ];
-
-      // Ajout du tableau avec autotable
-      doc.autoTable({
-        startY: 30,
-        head: [columns.map(col => col.header)],
-        body: rows.map(row => columns.map(col => row[col.dataKey])),
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [244, 211, 94], textColor: [0, 51, 102], fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [240, 240, 240] },
-        margin: { top: 10, left: 14, right: 14, bottom: 10 },
-      });
-
-      // Sauvegarde du PDF
-      doc.save('journal_conduite.pdf');
-    });
-
-
-
-    </script>
 
     <section class="mb-5">
       <div class="d-flex justify-content-between align-items-center mb-4">
@@ -170,7 +124,7 @@
                 <div class="text-dark">
                   <div class="fw-bold small text-uppercase text-muted">{{ session.date|date:"d/m/Y H:i" }}</div>
                   🚗 {{ session.distance_km|floatformat:2 }} km — 🕒 {{ session.duree|duration_hms }}
-                  <div class="text-muted small fst-italic">☁️ {{ session.meteo }}</div>
+                  <div class="text-muted small fst-italic">☁️ {{ session.meteo }}, {{ session.temperature }}°C</div>
                 </div>
               </div>
             </div>
@@ -195,6 +149,52 @@
       <canvas id="lineChart"></canvas>
     </section>
   </div>
+<script>
+document.getElementById('exportPdfBtn').addEventListener('click', () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Colonnes du tableau
+  const columns = [
+    { header: 'Date', dataKey: 'date' },
+    { header: 'Distance (km)', dataKey: 'distance' },
+    { header: 'Durée', dataKey: 'duration' },
+    { header: 'Météo', dataKey: 'meteo' }
+  ];
+
+  // Données Django injectées
+  const allRows = [
+    {% for session in sessions  %} // reversed = ?
+    {
+      date: "{{ session.date|date:'d/m/Y H:i' }}",
+      distance: "{{ session.distance_km|floatformat:2 }}",
+      duration: "{{ session.duree|duration_hms }}",
+      meteo : "{{ session.meteo }}, {{ session.temperature }}°C"
+    },
+    {% endfor %}
+  ];
+
+  // Titre du document
+  doc.setFontSize(18);
+  doc.text("Journal de conduite", 14, 22);
+
+  // Tableau complet (autogéré sur plusieurs pages si besoin)
+  doc.autoTable({
+    startY: 30,
+    head: [columns.map(col => col.header)],
+    body: allRows.map(row => columns.map(col => row[col.dataKey])),
+    styles: { fontSize: 10 },
+    headStyles: { fillColor: [244, 211, 94], textColor: [0, 51, 102], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [240, 240, 240] },
+    margin: { top: 10, left: 14, right: 14, bottom: 10 },
+    theme: 'grid',
+  });
+
+  // Sauvegarde du PDF
+  doc.save('journal_conduite.pdf');
+});
+</script>
+
 
   <!-- JS -->
   <script src="{% static 'js/dashboard.js' %}"></script>

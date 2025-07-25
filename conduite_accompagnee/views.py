@@ -15,35 +15,104 @@ import requests
 from django.utils.timezone import localtime, now
 
 
+
+
+def resume_meteo(meteo):
+    description = meteo.get("description", "").lower()
+    temperature = meteo.get("temperature", 0)
+    try:
+        temperature = float(temperature)
+    except (ValueError, TypeError):
+        temperature = 0
+
+    vent_strength = "inconnu"
+
+    # Extraire vitesse du vent depuis le champ description si possible
+    if "vent" in description:
+        import re
+        match = re.search(r"vent\s*:\s*([\d.]+)\s*km/h", description)
+        if match:
+            vitesse_vent = float(match.group(1))
+        else:
+            # Essaye un autre format : "vitesse du vent : 16.3 km/h"
+            match = re.search(r"vitesse du vent\s*:\s*([\d.]+)\s*km/h", description)
+            if match:
+                vitesse_vent = float(match.group(1))
+            else:
+                vitesse_vent = 0
+    else:
+        vitesse_vent = 0
+
+    # 🔎 Catégorisation du vent
+    if vitesse_vent < 10:
+        vent_strength = "brise légère"
+    elif vitesse_vent < 25:
+        vent_strength = "rafales modérées"
+    elif vitesse_vent < 50:
+        vent_strength = "vent fort"
+    else:
+        vent_strength = "rafales violentes"
+
+    # ☁️ Déduction météo globale
+    if "pluie" in description or "averses" in description:
+        if vitesse_vent > 25:
+            return f"pluie battante et {vent_strength}"
+        return f"pluvieux avec {vent_strength}"
+
+    elif "orage" in description:
+        return f"orageux avec {vent_strength}"
+
+    elif "nuage" in description or "couvert" in description:
+        return f"nuageux, {vent_strength}"
+
+    elif "soleil" in description or temperature > 25:
+        return f"ensoleillé, {vent_strength}"
+
+    elif vitesse_vent > 20:
+        return f"venteux ({vent_strength})"
+
+    else:
+        return f"conditions calmes, {vent_strength}"
+    
+
 def dashboard(request):
     if request.method == "POST":
         distance = float(request.POST.get("distance", 0))
         duration_seconds = int(request.POST.get("duration", 0))
+        meteo_json = request.POST.get("meteo")
+
+        try:
+            meteo_data = json.loads(meteo_json)
+            if not isinstance(meteo_data, dict):
+                meteo_data = {}
+        except json.JSONDecodeError:
+            meteo_data = {}
+
+        meteo_resume = resume_meteo(meteo_data)
+
         SessionConduite.objects.create(
             distance_km=distance,
             duree=timedelta(seconds=duration_seconds),
-            user=request.user
+            user=request.user,
+            meteo=meteo_resume,
+            temperature=meteo_data.get("temperature", 0),
         )
+
         return redirect('dashboard')
 
-    today = localtime(now())
-    date_31_days_ago = today - timedelta(days=31)
+    today = localtime(now()).date()
+    date_31_days_ago = today - timedelta(days=30)
     date_7_days_ago = today - timedelta(days=7)
 
-    # Toutes les sessions des 31 derniers jours
     all_sessions = SessionConduite.objects.filter(
         user=request.user,
-        date__gte=date_31_days_ago,
-        date__lte=today
+        date__date__gte=date_31_days_ago,
+        date__date__lte=today
     ).order_by('-date')
 
-    # Sessions récentes (7 derniers jours)
-    recent_sessions = all_sessions.filter(date__gte=date_7_days_ago)
-
-    # Savoir s’il y a des sessions plus anciennes à afficher avec un "plus..."
+    recent_sessions = all_sessions.filter(date__date__gte=date_7_days_ago)
     has_more_sessions = all_sessions.count() > recent_sessions.count()
 
-    # Statistiques générales (sur 31 jours)
     total_seconds = sum(session.duree.total_seconds() for session in all_sessions)
     total_duration = timedelta(seconds=total_seconds)
 
@@ -55,29 +124,33 @@ def dashboard(request):
         daily_distances[date] += session.distance_km
         daily_durations[date] += session.duree.total_seconds()
 
-    sorted_data = sorted(daily_distances.items())
-
     try:
         locale.setlocale(locale.LC_TIME, "fr_FR.UTF-8")
     except:
         locale.setlocale(locale.LC_TIME, "fr_FR")
 
-    chart_labels = [date.strftime("%A %d").capitalize() for date, _ in sorted_data]
-    chart_data = [round(distance, 2) for _, distance in sorted_data]
+    # 👉 Condition : si 10 sessions ou plus, on force l'affichage de tous les jours
+    if all_sessions.count() >= 10:
+        last_31_days = [date_31_days_ago + timedelta(days=i) for i in range(31)]
+    else:
+        last_31_days = sorted(daily_distances.keys())  # uniquement les jours où il y a des sessions
 
+    chart_labels = [date.strftime("%A %d").capitalize() for date in last_31_days]
+    chart_data = [round(daily_distances.get(date, 0), 2) for date in last_31_days]
     vmoyenne_par_jour = [
         round((daily_distances[date] / (daily_durations[date] / 3600)), 1) if daily_durations[date] > 0 else 0
-        for date, _ in sorted_data
+        for date in last_31_days
     ]
 
     context = {
         'sessions_7_days': recent_sessions,
         'has_more_sessions': has_more_sessions,
-        'total_distance': sum(session.distance_km for session in all_sessions),
+        'total_distance': sum(session.distance_km for session in all_sessions).__round__(0),
         'total_duration': total_duration,
         'chart_labels': chart_labels,
         'chart_data': chart_data,
         'vitesse_moyenne': vmoyenne_par_jour,
+        'sessions': all_sessions
     }
 
     return render(request, "index.html", context)

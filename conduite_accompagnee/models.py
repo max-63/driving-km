@@ -8,6 +8,7 @@ class SessionConduite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     duree = models.DurationField(blank=True)
     meteo = models.TextField(blank=True)
+    temperature = models.IntegerField(blank=True, null=True)
 
     def __str__(self):
         return f"Session {self.date} - {self.distance_km:.2f} km"
